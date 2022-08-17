@@ -1,0 +1,25 @@
+{
+  "name": "@pplns/node-sdk",
+  "version": "1.0.0",
+  "description": "SDK for implementing @pplns workers and nodes in NodeJS.",
+  "main": "lib/main.js",
+  "repository": "",
+  "author": "Adrian Kriegel",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "lint": "eslint --fix --ext .ts ./src ./test",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.24.28",
+    "axios": "^0.27.2"
+  },
+  "devDependencies": {
+    "@types/node": "^18.7.5",
+    "@unologin/eslint-config": "^1.1.0",
+    "eslint": "7",
+    "husky": "^8.0.1",
+    "typescript": "^4.7.4"
+  }
+}
