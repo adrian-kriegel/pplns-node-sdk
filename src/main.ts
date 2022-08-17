@@ -10,7 +10,6 @@ import {
   WorkerWrite,
   Worker,
   DataItemQuery,
-  DataItem,
 } from '@pplns/schemas';
 
 import { Static } from '@sinclair/typebox';
@@ -38,25 +37,23 @@ export type WorkerOutputType<
  */
 export default class PipelineApi
 {
-  client : AxiosInstance;
-
-  query : DataItemQuery;
+  private client : AxiosInstance;
 
   /** @param config config */
   constructor(
-    { query = {}, ...axiosConfig } : PipeApiConfig,
+    { ...axiosConfig } : PipeApiConfig,
   )
   {
     this.client = axios.create(axiosConfig); 
-
-    this.query = query;
   }
 
   /**
+   * Registers or updates the worker on the api.
+   * 
    * @param worker worker
    * @returns worker with _id
    */
-  registerWorker(
+  public registerWorker(
     worker : WorkerWrite,
   ) : Promise<Worker>
   {
@@ -67,14 +64,25 @@ export default class PipelineApi
   }
 
   /**
+   * @param nodeId node id
+   * @returns node from api
+   */
+  public async getNode(nodeId : string)
+  {
+    return (await this.client.get(
+      `/nodes/${nodeId}`,
+    )).data;
+  }
+
+  /**
    * Creates data item or pushes data into existing item.
    * @param query query
    * @param item item
    * @returns Promise
    */
-  postDataItem(
+  public postDataItem(
     query : DataItemQuery,
-    item : DataItem,
+    item : DataItemWrite,
   )
   {
     const searchParams = new URLSearchParams(
@@ -114,11 +122,7 @@ export abstract class PipelineNode<
    */
   async load()
   {
-    const response = await this.pipes.client.get(
-      `/nodes/${this.nodeId}`,
-    );
-
-    this.node = response.data;
+    this.node = await this.pipes.getNode(this.nodeId);
 
     return this;
   }
@@ -140,12 +144,12 @@ export abstract class PipelineNode<
    * @param item item to emit
    * @returns Promise
    */
-  emit<Channel extends keyof W['outputs']>(
+  emit<Channel extends keyof W['outputs'] & string>(
     item : DataItemWrite<WorkerOutputType<W, Channel>, Channel>,
   )
   {
-    return this.pipes.client.post(
-      `/nodes/${this.nodeId}/outputs`,
+    return this.pipes.postDataItem(
+      { nodeId: this.nodeId },
       item,
     );  
   }
