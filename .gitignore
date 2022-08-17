@@ -1,8 +1,5 @@
 .vscode
-keys/production
 
-# typescript
-build
 
 # serverless
 .serverless
