@@ -1,16 +1,23 @@
 import axios from 'axios';
-import { DataItemWrite, NodeRead } from '@pplns/schemas';
-import { WorkerWrite, Worker, DataItemQuery } from '@pplns/schemas';
+import { DataItemWrite, NodeRead, WorkerWrite, Worker, DataItemQuery } from '@pplns/schemas';
 import { Static } from '@sinclair/typebox';
+import { PreparedInput } from './input-stream';
 export declare type PipeApiConfig = Parameters<typeof axios.create>[0] & {
     query?: DataItemQuery;
 };
 export declare type WorkerDataType<IO extends 'inputs' | 'outputs', W extends Pick<Worker, IO>, C extends keyof W[IO]> = Static<W[IO][C]>;
-export declare type WorkerOutputType<W extends Pick<Worker, 'outputs'>, C extends keyof W['outputs']> = WorkerDataType<'outputs', W, C>;
+export declare type WorkerOutputType<W extends Pick<Worker, 'outputs'>, C extends keyof W['outputs'] = keyof W['outputs']> = WorkerDataType<'outputs', W, C>;
+export declare type WorkerInputType<W extends Pick<Worker, 'inputs'>, C extends keyof W['inputs'] = keyof W['inputs']> = WorkerDataType<'inputs', W, C>;
+declare type OptionalPromise<T> = Promise<T> | T;
+export declare type IWorker = WorkerWrite;
+export declare type NodeProcessor<W extends IWorker = IWorker> = (d: PreparedInput<W>) => OptionalPromise<{
+    [Channel in keyof W['outputs']]: DataItemWrite<WorkerOutputType<W, Channel>, Channel>;
+} | void>;
 /**
  */
 export default class PipelineApi {
     private client;
+    private processor?;
     /** @param config config */
     constructor({ ...axiosConfig }: PipeApiConfig);
     /**
@@ -19,7 +26,7 @@ export default class PipelineApi {
      * @param worker worker
      * @returns worker with _id
      */
-    registerWorker(worker: WorkerWrite): Promise<Worker>;
+    registerWorker(worker: IWorker): Promise<Worker>;
     /**
      * @param nodeId node id
      * @returns node from api
@@ -32,9 +39,19 @@ export default class PipelineApi {
      * @returns Promise
      */
     postDataItem(query: DataItemQuery, item: DataItemWrite): Promise<import("axios").AxiosResponse<any, any>>;
+    /**
+     * Sets the callback for processing incoming data.
+     * @param callback callback function
+     * @returns void
+     */
+    onData(callback: NodeProcessor): void;
+    /** @returns void */
+    private listen;
+    /** @returns void */
+    close(): void;
 }
 /** */
-export declare abstract class PipelineNode<W extends WorkerWrite = WorkerWrite> {
+export declare abstract class PipelineNode<W extends IWorker = IWorker> {
     private nodeId;
     private pipes;
     private node;
@@ -60,3 +77,4 @@ export declare abstract class PipelineNode<W extends WorkerWrite = WorkerWrite> 
      */
     param<ParamName extends keyof W['params'] & string>(name: ParamName): Static<W['params'][ParamName]>;
 }
+export {};

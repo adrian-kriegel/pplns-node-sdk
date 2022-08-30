@@ -4,15 +4,13 @@ import axios, { AxiosInstance } from 'axios';
 import {
   DataItemWrite,
   NodeRead,
-} from '@pplns/schemas';
-
-import {
   WorkerWrite,
   Worker,
   DataItemQuery,
 } from '@pplns/schemas';
 
 import { Static } from '@sinclair/typebox';
+import { PreparedInput } from './input-stream';
 
 export type PipeApiConfig = 
   Parameters<typeof axios.create>[0] & 
@@ -29,15 +27,39 @@ export type WorkerDataType<
 // output data type of a worker
 export type WorkerOutputType<
   W extends Pick<Worker, 'outputs'>,
-  C extends keyof W['outputs']
+  C extends keyof W['outputs'] = keyof W['outputs']
 > = WorkerDataType<'outputs', W, C>;
 
+// output data type of a worker
+export type WorkerInputType<
+  W extends Pick<Worker, 'inputs'>,
+  C extends keyof W['inputs'] = keyof W['inputs']
+> = WorkerDataType<'inputs', W, C>;
+
+
+type OptionalPromise<T> = Promise<T> | T;
+
+export type IWorker = WorkerWrite;
+
+export type NodeProcessor<
+  W extends IWorker = IWorker
+> = 
+  (d : PreparedInput<W>) => OptionalPromise<
+    {
+      [Channel in keyof W['outputs']]: DataItemWrite<
+        WorkerOutputType<W, Channel>, Channel
+      >
+    } | void
+  >
+;
 
 /**
  */
 export default class PipelineApi
 {
   private client : AxiosInstance;
+
+  private processor?: NodeProcessor;
 
   /** @param config config */
   constructor(
@@ -54,7 +76,7 @@ export default class PipelineApi
    * @returns worker with _id
    */
   public registerWorker(
-    worker : WorkerWrite,
+    worker : IWorker,
   ) : Promise<Worker>
   {
     return this.client.put(
@@ -99,11 +121,42 @@ export default class PipelineApi
       item,
     );
   }
+
+  /**
+   * Sets the callback for processing incoming data.
+   * @param callback callback function
+   * @returns void
+   */
+  public onData(
+    callback : NodeProcessor,
+  )
+  {
+    if (this.processor)
+    {
+      throw new Error('There can be only one processor per instance.');
+    }
+
+    this.processor = callback;
+
+    this.listen();
+  }
+
+  /** @returns void */
+  private listen()
+  {
+    // TODO: implement
+  }
+
+  /** @returns void */
+  public close()
+  {
+    // TODO: implement
+  }
 }
 
 /** */
 export abstract class PipelineNode<
-  W extends WorkerWrite = WorkerWrite,
+  W extends IWorker = IWorker,
 >
 {
   private node : NodeRead | null = null;
