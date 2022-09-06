@@ -4,7 +4,7 @@ import type {
 } from '@pplns/schemas';
   
 import { Type } from '@sinclair/typebox';
-import { PipelineNode } from '../src/main';
+import { PipelineNode } from '../../src/main';
   
 /** Worker definition for the S3 worker. */
 export class ExampleWorker

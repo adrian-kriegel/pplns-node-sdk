@@ -5,13 +5,22 @@ import { IWorker, WorkerInputType } from './main';
 export declare type PreparedInput<W extends IWorker> = {
     _id: BundleRead['_id'];
     flowId: FlowId;
+    flowStack: DataItem['flowStack'];
     inputs: {
         [Channel in keyof W['inputs']]: DataItem<WorkerInputType<W, Channel>, Channel>;
     };
 };
+/**
+ *
+ * @param bundle bundle
+ * @returns prepared bundle
+ */
+export declare function prepareBundle<W extends IWorker>(bundle: BundleRead): PreparedInput<W>;
 declare type Interval = ReturnType<typeof setInterval>;
 /**
  * Listens for new input bundles from the api.
+ *
+ * WORK IN PROGRESS
  */
 export default class DataInputStream<W extends IWorker = IWorker> extends Readable {
     private query;

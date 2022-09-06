@@ -1,5 +1,5 @@
 
-import { ExampleNode } from './example-node';
+import { ExampleNode } from './util/example-data';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const dontrun = (_ : () => void) => null;

@@ -18,6 +18,7 @@ export type PreparedInput<W extends IWorker> =
 {
   _id: BundleRead['_id'];
   flowId: FlowId;
+  flowStack: DataItem['flowStack'];
   inputs:
   {
     [Channel in keyof W['inputs']]: DataItem<
@@ -26,10 +27,25 @@ export type PreparedInput<W extends IWorker> =
   }
 };
 
+/**
+ * 
+ * @param bundle bundle
+ * @returns prepared bundle
+ */
+export function prepareBundle<W extends IWorker>(
+  bundle : BundleRead,
+)
+{
+  // TODO: implement
+  return bundle as any as PreparedInput<W>;
+}
+
 type Interval = ReturnType<typeof setInterval>;
 
 /**
  * Listens for new input bundles from the api.
+ * 
+ * WORK IN PROGRESS 
  */
 export default class DataInputStream<
   W extends IWorker = IWorker
@@ -87,8 +103,10 @@ export default class DataInputStream<
         }
         finally 
         {
-          this.resume();
-          this.activeCallbacks--;
+          if (this.activeCallbacks-- <= this.maxConurrency)
+          {
+            this.resume();
+          }
         }
       });
     }

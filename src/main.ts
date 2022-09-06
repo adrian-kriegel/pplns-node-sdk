@@ -1,5 +1,8 @@
 
-import axios, { AxiosInstance } from 'axios';
+import axios, {
+  AxiosInstance,
+  AxiosResponse,
+} from 'axios';
 
 import {
   DataItemWrite,
@@ -7,6 +10,8 @@ import {
   WorkerWrite,
   Worker,
   DataItemQuery,
+  BundleQuery,
+  BundleRead,
 } from '@pplns/schemas';
 
 import { Static } from '@sinclair/typebox';
@@ -54,19 +59,175 @@ export type NodeProcessor<
 ;
 
 /**
+ * wraps around axios instance to handle all errors
+ */
+class HttpClientWrapper
+{
+  /** */
+  constructor(
+    private client : AxiosInstance,
+  ) {}
+
+  /**
+   * @param url url
+   * @returns response
+   */
+  get(url : string) 
+  {
+    return this.request('get', url);
+  }
+
+  /**
+   * @param url url
+   * @param body body
+   * @returns response
+   */
+  post(url : string, body : any = {}) 
+  {
+    return this.request('post', url, body);
+  }
+
+  /**
+   * @param url url
+   * @param body body
+   * @returns response
+   */
+  put(url : string, body : any = {}) 
+  {
+    return this.request('put', url, body);
+  }
+
+  /**
+   * @param url url
+   * @param body body
+   * @returns response
+   */
+  patch(url : string, body : any) 
+  {
+    return this.request('patch', url, body);
+  }
+
+  /**
+   * @param url url
+   * @returns response
+   */
+  delete(url : string) 
+  {
+    return this.request('delete', url);
+  }
+
+  /**
+   * @param method method
+   * @param url url
+   * @param body body
+   * @returns response
+   */
+  async request(
+    method : string,
+    url : string,
+    body?: any,
+  )
+  {
+    let response : AxiosResponse;
+
+    try 
+    {
+      response = await this.client.request(
+        {
+          method,
+          url,
+          data: body,
+        },
+      );
+    }
+    catch (e : any)
+    {
+      if (e.response)
+      {
+        response = e.response;
+      }
+      else 
+      {
+        throw e;
+      }
+    }
+
+    if (response.status >= 200 && response.status < 300)
+    {
+      return response.data;
+    }
+    else 
+    {
+      throw response.data;
+    }
+  }
+}
+
+/**
+ * Stringify a query string value.
+ * @param v v
+ * @returns JSON or raw string
+ */
+export function stringifyQueryValue(v : any)
+{
+  if (typeof(v) === 'object' && 'toJSON' in v)
+  {
+    return v.toJSON();
+  }
+
+  const res = JSON.stringify(v);
+
+  return res.startsWith('"') ? ''+v : res;
+}
+
+/**
+ * Removes undefined values and stringigies remaining values.
+ * @param query query
+ * @returns query stringified
+ */
+export function stringifyQuery(query : object)
+{
+  return Object.fromEntries(
+    Object.entries(query)
+      .filter(([, v]) => v !== undefined)
+      .map(([key, v]) => 
+        [
+          key,
+          encodeURIComponent(stringifyQueryValue(v)),
+        ],
+      ),
+  );
+}
+
+/**
+ * Stringifies all values and builds URLSearchParams.
+ * @param query query
+ * @returns URLSearchParams
+ */
+export function buildSearchParams(
+  query : object,
+)
+{
+  return new URLSearchParams(stringifyQuery(query));
+}
+
+/**
  */
 export default class PipelineApi
 {
-  private client : AxiosInstance;
+  public client : HttpClientWrapper;
 
-  private processor?: NodeProcessor;
+  private registeredWorkers : {
+    // maps worker.key to worker
+    [key : string]: Worker
+  } = {};
 
   /** @param config config */
   constructor(
     { ...axiosConfig } : PipeApiConfig,
   )
   {
-    this.client = axios.create(axiosConfig); 
+    this.client = new HttpClientWrapper(axios.create(axiosConfig)); 
   }
 
   /**
@@ -75,14 +236,23 @@ export default class PipelineApi
    * @param worker worker
    * @returns worker with _id
    */
-  public registerWorker(
+  public async registerWorker(
     worker : IWorker,
   ) : Promise<Worker>
   {
-    return this.client.put(
+    if (worker.key in this.registeredWorkers)
+    {
+      return this.registeredWorkers[worker.key];
+    }
+
+    const result = await this.client.post(
       '/workers',
       worker,
     );
+
+    this.registeredWorkers[worker.key] = result;
+
+    return result;
   }
 
   /**
@@ -102,55 +272,53 @@ export default class PipelineApi
    * @param item item
    * @returns Promise
    */
-  public postDataItem(
+  public emit(
     query : DataItemQuery,
     item : DataItemWrite,
   )
   {
-    const searchParams = new URLSearchParams(
-      // this basically just stringifies the ObjectIds
-      Object.fromEntries(
-        Object.entries(query)
-          .filter(([, v]) => v)
-          .map(([k, v]) => [k, '' + v]),
-      ),
-    );
-
     return this.client.post(
-      '/outputs?' + searchParams.toString(),
+      '/outputs?' + buildSearchParams(query),
       item,
     );
   }
 
   /**
-   * Sets the callback for processing incoming data.
-   * @param callback callback function
+   * @param query query
+   * @returns bundles
+   */
+  public async consume(
+    query : BundleQuery = {},
+  ) : Promise<BundleRead[]>
+  {
+    const { results } = await this.client.get(
+      '/bundles?' + buildSearchParams(
+        {
+          consume: true,
+          ...query,
+        },
+      ),
+    );
+
+    return results;
+  }
+
+  /**
+   * Undo consuming a bundle. Makes the bundle available again.
+   * @param taskId taskId
+   * @param bundleId bundleId
    * @returns void
    */
-  public onData(
-    callback : NodeProcessor,
-  )
+  public unconsume(
+    taskId : string,
+    bundleId : string,
+  ) : Promise<void>
   {
-    if (this.processor)
-    {
-      throw new Error('There can be only one processor per instance.');
-    }
-
-    this.processor = callback;
-
-    this.listen();
-  }
-
-  /** @returns void */
-  private listen()
-  {
-    // TODO: implement
-  }
-
-  /** @returns void */
-  public close()
-  {
-    // TODO: implement
+    return this.client.put(
+      '/bundles/' + bundleId + '?' + buildSearchParams(
+        { taskId },
+      ),
+    );
   }
 }
 
@@ -165,15 +333,15 @@ export abstract class PipelineNode<
    * @param nodeId nodeId
    * @param pipes pipes api
    */
-  constructor(
-    private nodeId : string,
-    private pipes : PipelineApi,
+  public constructor(
+    public readonly nodeId : string,
+    public readonly pipes : PipelineApi,
   ) {}
 
   /**
    * @returns Promise<NodeRead>
    */
-  async load()
+  public async load()
   {
     this.node = await this.pipes.getNode(this.nodeId);
 
@@ -181,7 +349,7 @@ export abstract class PipelineNode<
   }
 
   /** @returns node from api */
-  get() : NodeRead
+  public get() : NodeRead
   {
     if (this.node)
     {
@@ -197,12 +365,15 @@ export abstract class PipelineNode<
    * @param item item to emit
    * @returns Promise
    */
-  emit<Channel extends keyof W['outputs'] & string>(
+  public emit<Channel extends keyof W['outputs'] & string>(
     item : DataItemWrite<WorkerOutputType<W, Channel>, Channel>,
   )
   {
-    return this.pipes.postDataItem(
-      { nodeId: this.nodeId },
+    return this.pipes.emit(
+      {
+        nodeId: this.nodeId,
+        taskId: this.get().taskId,
+      },
       item,
     );  
   }
@@ -211,7 +382,7 @@ export abstract class PipelineNode<
    * @param name param name
    * @returns param value
    */
-  param<ParamName extends keyof W['params'] & string>(
+  public param<ParamName extends keyof W['params'] & string>(
     name : ParamName,
   ) : Static<W['params'][ParamName]>
   {

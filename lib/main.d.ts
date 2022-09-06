@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { DataItemWrite, NodeRead, WorkerWrite, Worker, DataItemQuery } from '@pplns/schemas';
+import axios, { AxiosInstance } from 'axios';
+import { DataItemWrite, NodeRead, WorkerWrite, Worker, DataItemQuery, BundleQuery, BundleRead } from '@pplns/schemas';
 import { Static } from '@sinclair/typebox';
 import { PreparedInput } from './input-stream';
 export declare type PipeApiConfig = Parameters<typeof axios.create>[0] & {
@@ -14,10 +14,73 @@ export declare type NodeProcessor<W extends IWorker = IWorker> = (d: PreparedInp
     [Channel in keyof W['outputs']]: DataItemWrite<WorkerOutputType<W, Channel>, Channel>;
 } | void>;
 /**
+ * wraps around axios instance to handle all errors
+ */
+declare class HttpClientWrapper {
+    private client;
+    /** */
+    constructor(client: AxiosInstance);
+    /**
+     * @param url url
+     * @returns response
+     */
+    get(url: string): Promise<any>;
+    /**
+     * @param url url
+     * @param body body
+     * @returns response
+     */
+    post(url: string, body?: any): Promise<any>;
+    /**
+     * @param url url
+     * @param body body
+     * @returns response
+     */
+    put(url: string, body?: any): Promise<any>;
+    /**
+     * @param url url
+     * @param body body
+     * @returns response
+     */
+    patch(url: string, body: any): Promise<any>;
+    /**
+     * @param url url
+     * @returns response
+     */
+    delete(url: string): Promise<any>;
+    /**
+     * @param method method
+     * @param url url
+     * @param body body
+     * @returns response
+     */
+    request(method: string, url: string, body?: any): Promise<any>;
+}
+/**
+ * Stringify a query string value.
+ * @param v v
+ * @returns JSON or raw string
+ */
+export declare function stringifyQueryValue(v: any): any;
+/**
+ * Removes undefined values and stringigies remaining values.
+ * @param query query
+ * @returns query stringified
+ */
+export declare function stringifyQuery(query: object): {
+    [k: string]: string;
+};
+/**
+ * Stringifies all values and builds URLSearchParams.
+ * @param query query
+ * @returns URLSearchParams
+ */
+export declare function buildSearchParams(query: object): URLSearchParams;
+/**
  */
 export default class PipelineApi {
-    private client;
-    private processor?;
+    client: HttpClientWrapper;
+    private registeredWorkers;
     /** @param config config */
     constructor({ ...axiosConfig }: PipeApiConfig);
     /**
@@ -38,22 +101,24 @@ export default class PipelineApi {
      * @param item item
      * @returns Promise
      */
-    postDataItem(query: DataItemQuery, item: DataItemWrite): Promise<import("axios").AxiosResponse<any, any>>;
+    emit(query: DataItemQuery, item: DataItemWrite): Promise<any>;
     /**
-     * Sets the callback for processing incoming data.
-     * @param callback callback function
+     * @param query query
+     * @returns bundles
+     */
+    consume(query?: BundleQuery): Promise<BundleRead[]>;
+    /**
+     * Undo consuming a bundle. Makes the bundle available again.
+     * @param taskId taskId
+     * @param bundleId bundleId
      * @returns void
      */
-    onData(callback: NodeProcessor): void;
-    /** @returns void */
-    private listen;
-    /** @returns void */
-    close(): void;
+    unconsume(taskId: string, bundleId: string): Promise<void>;
 }
 /** */
 export declare abstract class PipelineNode<W extends IWorker = IWorker> {
-    private nodeId;
-    private pipes;
+    readonly nodeId: string;
+    readonly pipes: PipelineApi;
     private node;
     /**
      * @param nodeId nodeId
@@ -70,7 +135,7 @@ export declare abstract class PipelineNode<W extends IWorker = IWorker> {
      * @param item item to emit
      * @returns Promise
      */
-    emit<Channel extends keyof W['outputs'] & string>(item: DataItemWrite<WorkerOutputType<W, Channel>, Channel>): Promise<import("axios").AxiosResponse<any, any>>;
+    emit<Channel extends keyof W['outputs'] & string>(item: DataItemWrite<WorkerOutputType<W, Channel>, Channel>): Promise<any>;
     /**
      * @param name param name
      * @returns param value
