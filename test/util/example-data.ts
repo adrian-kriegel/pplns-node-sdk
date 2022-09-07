@@ -10,7 +10,7 @@ import { PipelineNode } from '../../src/main';
 export class ExampleWorker
 implements WorkerWrite
 {
-  key = 'example';
+  _id = 'example';
 
   title = 'Example.';
 

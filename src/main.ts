@@ -240,17 +240,17 @@ export default class PipelineApi
     worker : IWorker,
   ) : Promise<Worker>
   {
-    if (worker.key in this.registeredWorkers)
+    if (worker._id in this.registeredWorkers)
     {
-      return this.registeredWorkers[worker.key];
+      return this.registeredWorkers[worker._id];
     }
 
-    const result = await this.client.post(
-      '/workers',
+    const result = await this.client.put(
+      '/workers/' + worker._id,
       worker,
     );
 
-    this.registeredWorkers[worker.key] = result;
+    this.registeredWorkers[worker._id] = result;
 
     return result;
   }
