@@ -7,7 +7,7 @@ export declare type PreparedInput<W extends IWorker> = {
     flowId: FlowId;
     flowStack: DataItem['flowStack'];
     inputs: {
-        [Channel in keyof W['inputs']]: DataItem<WorkerInputType<W, Channel>, Channel>;
+        [Channel in keyof W['inputs']]: DataItem<WorkerInputType<W, Channel>, string>;
     };
 };
 /**

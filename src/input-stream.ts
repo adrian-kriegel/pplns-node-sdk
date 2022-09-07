@@ -22,7 +22,7 @@ export type PreparedInput<W extends IWorker> =
   inputs:
   {
     [Channel in keyof W['inputs']]: DataItem<
-      WorkerInputType<W, Channel>, Channel
+      WorkerInputType<W, Channel>, string
     >
   }
 };
