@@ -272,9 +272,12 @@ export default class PipelineApi
    * @param item item
    * @returns Promise
    */
-  public emit(
+  public emit<
+    W extends IWorker = any, 
+    Channel extends keyof W['outputs'] & string = any
+  >(
     query : DataItemQuery,
-    item : DataItemWrite,
+    item : DataItemWrite<WorkerOutputType<W, Channel>, Channel>,
   )
   {
     return this.client.post(

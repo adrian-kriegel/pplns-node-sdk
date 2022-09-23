@@ -101,7 +101,7 @@ export default class PipelineApi {
      * @param item item
      * @returns Promise
      */
-    emit(query: DataItemQuery, item: DataItemWrite): Promise<any>;
+    emit<W extends IWorker = any, Channel extends keyof W['outputs'] & string = any>(query: DataItemQuery, item: DataItemWrite<WorkerOutputType<W, Channel>, Channel>): Promise<any>;
     /**
      * @param query query
      * @returns bundles
