@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { DataItemWrite, NodeRead, WorkerWrite, Worker, DataItemQuery, BundleQuery, BundleRead } from '@pplns/schemas';
+import { DataItemWrite, NodeRead, WorkerWrite, Worker, DataItemQuery, BundleQuery, BundleRead, DataItem } from '@pplns/schemas';
 import { Static } from '@sinclair/typebox';
 import { PreparedInput } from './input-stream';
 export declare type PipeApiConfig = Parameters<typeof axios.create>[0] & {
@@ -13,6 +13,21 @@ export declare type IWorker = WorkerWrite;
 export declare type NodeProcessor<W extends IWorker = IWorker> = (d: PreparedInput<W>) => OptionalPromise<{
     [Channel in keyof W['outputs']]: DataItemWrite<WorkerOutputType<W, Channel>, Channel>;
 } | void>;
+export declare type GetResponse<T> = {
+    results: T[];
+    total: number;
+};
+/** */
+export declare class ApiError extends Error {
+    code: number;
+    data: unknown;
+    /**
+     *
+     * @param code code
+     * @param body response body
+     */
+    constructor(code: number, body: any);
+}
 /**
  * wraps around axios instance to handle all errors
  */
@@ -68,7 +83,7 @@ export declare function stringifyQueryValue(v: any): any;
  * @returns query stringified
  */
 export declare function stringifyQuery(query: object): {
-    [k: string]: string;
+    [k: string]: any;
 };
 /**
  * Stringifies all values and builds URLSearchParams.
@@ -102,6 +117,11 @@ export default class PipelineApi {
      * @returns Promise
      */
     emit<W extends IWorker = any, Channel extends keyof W['outputs'] & string = any>(query: DataItemQuery, item: DataItemWrite<WorkerOutputType<W, Channel>, Channel>): Promise<any>;
+    /**
+     * @param query query
+     * @returns GetResponse
+     */
+    getDataItems(query: DataItemQuery): Promise<GetResponse<DataItem>>;
     /**
      * @param query query
      * @returns bundles

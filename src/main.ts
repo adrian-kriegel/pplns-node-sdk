@@ -12,6 +12,7 @@ import {
   DataItemQuery,
   BundleQuery,
   BundleRead,
+  DataItem,
 } from '@pplns/schemas';
 
 import { Static } from '@sinclair/typebox';
@@ -57,6 +58,42 @@ export type NodeProcessor<
     } | void
   >
 ;
+
+export type GetResponse<T> = 
+{
+  results: T[];
+  total: number;
+};
+
+/** */
+export class ApiError extends Error
+{
+  code : number;
+  data : unknown;
+
+  /**
+   * 
+   * @param code code
+   * @param body response body
+   */
+  constructor(code : number, body : any)
+  {
+    const msg = typeof(body) === 'object' ? 
+      body.msg || body.message : 
+      JSON.stringify(body)
+    ;
+
+    super(
+      body.data ? 
+        msg + '\n Data:' + JSON.stringify(body.data, null, 2) : 
+        msg,
+    );
+
+    this.code = code;
+
+    this.data = body.data;
+  }
+}
 
 /**
  * wraps around axios instance to handle all errors
@@ -158,7 +195,7 @@ class HttpClientWrapper
     }
     else 
     {
-      throw response.data;
+      throw new ApiError(response.status, response.data);
     }
   }
 }
@@ -177,7 +214,7 @@ export function stringifyQueryValue(v : any)
 
   const res = JSON.stringify(v);
 
-  return res.startsWith('"') ? ''+v : res;
+  return res.startsWith('"') ? ('' + v) : res;
 }
 
 /**
@@ -193,7 +230,7 @@ export function stringifyQuery(query : object)
       .map(([key, v]) => 
         [
           key,
-          encodeURIComponent(stringifyQueryValue(v)),
+          stringifyQueryValue(v),
         ],
       ),
   );
@@ -261,9 +298,9 @@ export default class PipelineApi
    */
   public async getNode(nodeId : string)
   {
-    return (await this.client.get(
+    return this.client.get(
       `/nodes/${nodeId}`,
-    )).data;
+    );
   }
 
   /**
@@ -284,6 +321,17 @@ export default class PipelineApi
       '/outputs?' + buildSearchParams(query),
       item,
     );
+  }
+
+  /**
+   * @param query query
+   * @returns GetResponse
+   */
+  public getDataItems(
+    query : DataItemQuery,
+  ) : Promise<GetResponse<DataItem>>
+  {
+    return this.client.get('/outputs?' + buildSearchParams(query));
   }
 
   /**

@@ -1,5 +1,8 @@
 
+import './util/custom-matchers.d.ts';
+
 import {
+  ApiError,
   buildSearchParams,
   stringifyQuery,
 } from '../src/main';
@@ -31,7 +34,14 @@ describe('Response handling', () =>
       await expect(
         // just testing GET but method is not relevant for error handling
         () => api.client.request('get', '/test'),
-      ).rejects.toStrictEqual(resp);
+        // @ts-ignore TODO: ts-jest does not know about the custom matchers for some reason...
+      ).rejects.toMatchCustom(
+        (e : ApiError) => 
+        {
+          expect(e.message).toBe(resp.msg);
+          expect(e.code).toBe(status);
+        },
+      );
     }
   });
 
@@ -82,11 +92,11 @@ describe('buildSearchParams', () =>
         },
         // out
         { 
-          str: encodeURIComponent('bar'),
-          num: encodeURIComponent('123'),
-          date: encodeURIComponent('2022-09-06T08:47:04.245Z'),
-          bool: encodeURIComponent('false'),
-          obj: encodeURIComponent(JSON.stringify({ foo: 'bar' })),
+          str: ('bar'),
+          num: ('123'),
+          date: ('2022-09-06T08:47:04.245Z'),
+          bool: ('false'),
+          obj: (JSON.stringify({ foo: 'bar' })),
         },
       ],
     ];
