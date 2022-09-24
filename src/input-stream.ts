@@ -18,7 +18,6 @@ export type PreparedInput<W extends IWorker> =
 {
   _id: BundleRead['_id'];
   flowId: FlowId;
-  flowStack: DataItem['flowStack'];
   inputs:
   {
     [Channel in keyof W['inputs']]: DataItem<
@@ -28,16 +27,25 @@ export type PreparedInput<W extends IWorker> =
 };
 
 /**
- * 
  * @param bundle bundle
  * @returns prepared bundle
  */
 export function prepareBundle<W extends IWorker>(
-  bundle : BundleRead,
-)
+  bundle : Pick<BundleRead, 'items' | 'flowId' | '_id' | 'inputItems'>,
+) : PreparedInput<W>
 {
-  // TODO: implement
-  return bundle as any as PreparedInput<W>;
+  return {
+    _id: bundle._id,
+    flowId: bundle.flowId,
+    inputs: Object.fromEntries(
+      bundle.inputItems.map(
+        (item) => [
+          item.inputChannel,
+          bundle.items.find(({_id}) => _id === item.itemId),
+        ],
+      ),
+    ) as any,
+  };
 }
 
 type Interval = ReturnType<typeof setInterval>;
