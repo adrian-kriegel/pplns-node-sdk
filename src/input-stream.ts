@@ -5,7 +5,6 @@ import {
   BundleQuery,
   BundleRead,
   DataItem,
-  FlowId,
 } from '@pplns/schemas';
 
 import {
@@ -14,29 +13,31 @@ import {
 } from './main';
 
 
-export type PreparedInput<W extends IWorker> =
+export type PreparedInput<
+  W extends IWorker,
+  B extends Pick<BundleRead, 'items'| 'inputItems'> = BundleRead
+> =
 {
-  _id: BundleRead['_id'];
-  flowId: FlowId;
+  bundle: B;
   inputs:
   {
     [Channel in keyof W['inputs']]: DataItem<
       WorkerInputType<W, Channel>, string
-    >
-  }
+    >;
+  };
 };
 
 /**
  * @param bundle bundle
  * @returns prepared bundle
  */
-export function prepareBundle<W extends IWorker>(
-  bundle : Pick<BundleRead, 'items' | 'flowId' | '_id' | 'inputItems'>,
-) : PreparedInput<W>
+export function prepareBundle<
+  W extends IWorker, 
+  B extends Pick<BundleRead, 'items'| 'inputItems'> = BundleRead
+>(bundle : B) : PreparedInput<W, B>
 {
   return {
-    _id: bundle._id,
-    flowId: bundle.flowId,
+    bundle,
     inputs: Object.fromEntries(
       bundle.inputItems.map(
         (item) => [

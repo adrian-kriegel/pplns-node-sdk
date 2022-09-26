@@ -23,6 +23,7 @@ describe('[types] PipelineNode', () =>
             outputChannel: 'out0',
             done: true,
             data: ['a string'],
+            consumptionId: null,
           },
         );
 
@@ -40,6 +41,7 @@ describe('[types] PipelineNode', () =>
             outputChannel: 'out1',
             done: true,
             data: [{ url: 'http://example.com' }],
+            consumptionId: null,
           },
         );
 

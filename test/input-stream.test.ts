@@ -1,4 +1,5 @@
 
+import { DataItem } from '@pplns/schemas';
 import {
   prepareBundle,
 } from '../src/input-stream';
@@ -9,7 +10,8 @@ test('prepareBundle', () =>
 
   type BundleMin = Parameters<typeof prepareBundle>[0];
 
-  const itemBox = {
+  const itemBox : DataItem = 
+  {
     _id: 'itemId-box',
     done: true,
     flowId: 'img0333.jpg',
@@ -20,9 +22,11 @@ test('prepareBundle', () =>
     data: ['data-box'],
     flowStack: [],
     producerNodeIds: [],
+    consumptionId: null,
   };
 
-  const itemImg = {
+  const itemImg : DataItem = 
+  {
     _id: 'itemId-img',
     done: true,
     flowId: '632f098a191fa419e5f8c3c2',
@@ -33,12 +37,11 @@ test('prepareBundle', () =>
     data: ['data-image'],
     flowStack: [],
     producerNodeIds: [],
+    consumptionId: null,
   };
   
   const bundle : BundleMin = 
   {
-    _id: '632f098a8dba970dff9f106a',
-    flowId: '632f098a191fa419e5f8c3c2',
     inputItems: [
       {
         position: 1,

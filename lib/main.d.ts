@@ -131,9 +131,10 @@ export default class PipelineApi {
      * Undo consuming a bundle. Makes the bundle available again.
      * @param taskId taskId
      * @param bundleId bundleId
+     * @param consumptionId consumptionId
      * @returns void
      */
-    unconsume(taskId: string, bundleId: string): Promise<void>;
+    unconsume(taskId: string, bundleId: string, consumptionId: string): Promise<void>;
 }
 /** */
 export declare abstract class PipelineNode<W extends IWorker = IWorker> {

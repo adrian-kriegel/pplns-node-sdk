@@ -1,10 +1,9 @@
 /// <reference types="node" />
 import { Readable } from 'stream';
-import { BundleQuery, BundleRead, DataItem, FlowId } from '@pplns/schemas';
+import { BundleQuery, BundleRead, DataItem } from '@pplns/schemas';
 import { IWorker, WorkerInputType } from './main';
-export declare type PreparedInput<W extends IWorker> = {
-    _id: BundleRead['_id'];
-    flowId: FlowId;
+export declare type PreparedInput<W extends IWorker, B extends Pick<BundleRead, 'items' | 'inputItems'> = BundleRead> = {
+    bundle: B;
     inputs: {
         [Channel in keyof W['inputs']]: DataItem<WorkerInputType<W, Channel>, string>;
     };
@@ -13,7 +12,7 @@ export declare type PreparedInput<W extends IWorker> = {
  * @param bundle bundle
  * @returns prepared bundle
  */
-export declare function prepareBundle<W extends IWorker>(bundle: Pick<BundleRead, 'items' | 'flowId' | '_id' | 'inputItems'>): PreparedInput<W>;
+export declare function prepareBundle<W extends IWorker, B extends Pick<BundleRead, 'items' | 'inputItems'> = BundleRead>(bundle: B): PreparedInput<W, B>;
 declare type Interval = ReturnType<typeof setInterval>;
 /**
  * Listens for new input bundles from the api.
