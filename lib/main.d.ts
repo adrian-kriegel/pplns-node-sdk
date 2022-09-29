@@ -1,9 +1,9 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { DataItemWrite, NodeRead, WorkerWrite, Worker, DataItemQuery, BundleQuery, BundleRead, DataItem } from '@pplns/schemas';
 import { Static } from '@sinclair/typebox';
 import { PreparedInput } from './input-stream';
 export declare type PipeApiConfig = Parameters<typeof axios.create>[0] & {
-    query?: DataItemQuery;
+    apiKey: string;
 };
 export declare type WorkerDataType<IO extends 'inputs' | 'outputs', W extends Pick<Worker, IO>, C extends keyof W[IO]> = Static<W[IO][C]>;
 export declare type WorkerOutputType<W extends Pick<Worker, 'outputs'>, C extends keyof W['outputs'] = keyof W['outputs']> = WorkerDataType<'outputs', W, C>;
@@ -33,8 +33,11 @@ export declare class ApiError extends Error {
  */
 declare class HttpClientWrapper {
     private client;
+    private headers;
     /** */
-    constructor(client: AxiosInstance);
+    constructor(client: AxiosInstance, headers?: {
+        [k: string]: string;
+    });
     /**
      * @param url url
      * @returns response
@@ -64,12 +67,20 @@ declare class HttpClientWrapper {
      */
     delete(url: string): Promise<any>;
     /**
+     *
+     * @param method method
+     * @param url url
+     * @param body body
+     * @returns axios request config
+     */
+    buildRequest(method: string, url: string, body: unknown): AxiosRequestConfig;
+    /**
      * @param method method
      * @param url url
      * @param body body
      * @returns response
      */
-    request(method: string, url: string, body?: any): Promise<any>;
+    request(method: string, url: string, body?: unknown): Promise<any>;
 }
 /**
  * Stringify a query string value.
@@ -97,7 +108,7 @@ export default class PipelineApi {
     client: HttpClientWrapper;
     private registeredWorkers;
     /** @param config config */
-    constructor({ ...axiosConfig }: PipeApiConfig);
+    constructor({ apiKey, ...axiosConfig }: PipeApiConfig);
     /**
      * Registers or updates the worker on the api.
      *

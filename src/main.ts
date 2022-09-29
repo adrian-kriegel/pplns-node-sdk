@@ -1,6 +1,7 @@
 
 import axios, {
   AxiosInstance,
+  AxiosRequestConfig,
   AxiosResponse,
 } from 'axios';
 
@@ -20,7 +21,9 @@ import { PreparedInput } from './input-stream';
 
 export type PipeApiConfig = 
   Parameters<typeof axios.create>[0] & 
-  { query?: DataItemQuery }
+  { 
+    apiKey: string,
+  }
 ;
 
 // input/output data type of a worker
@@ -103,6 +106,7 @@ class HttpClientWrapper
   /** */
   constructor(
     private client : AxiosInstance,
+    private headers : { [k: string]: string } = {},
   ) {}
 
   /**
@@ -154,6 +158,31 @@ class HttpClientWrapper
   }
 
   /**
+   * 
+   * @param method method
+   * @param url url
+   * @param body body
+   * @returns axios request config
+   */
+  buildRequest(
+    method: string,
+    url: string,
+    body : unknown,
+  ) : AxiosRequestConfig
+  {
+    return {
+      method,
+      url,
+      data: body,
+      headers: 
+      {
+        'Content-Type': 'application/json',
+        ...this.headers,
+      },
+    };
+  }
+
+  /**
    * @param method method
    * @param url url
    * @param body body
@@ -162,7 +191,7 @@ class HttpClientWrapper
   async request(
     method : string,
     url : string,
-    body?: any,
+    body?: unknown,
   )
   {
     let response : AxiosResponse;
@@ -170,11 +199,7 @@ class HttpClientWrapper
     try 
     {
       response = await this.client.request(
-        {
-          method,
-          url,
-          data: body,
-        },
+        this.buildRequest(method, url, body),
       );
     }
     catch (e : any)
@@ -255,16 +280,21 @@ export default class PipelineApi
   public client : HttpClientWrapper;
 
   private registeredWorkers : {
-    // maps worker.key to worker
+    // maps worker._id to worker
     [key : string]: Worker
   } = {};
 
   /** @param config config */
   constructor(
-    { ...axiosConfig } : PipeApiConfig,
+    { apiKey, ...axiosConfig } : PipeApiConfig,
   )
   {
-    this.client = new HttpClientWrapper(axios.create(axiosConfig)); 
+    this.client = new HttpClientWrapper(
+      axios.create(axiosConfig),
+      {
+        'X-API-Key': apiKey,
+      },
+    ); 
   }
 
   /**

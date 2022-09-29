@@ -11,7 +11,7 @@ export default class TestApi
    */
   constructor()
   {
-    super({});
+    super({ apiKey: 'key-for-testing-' });
 
     (this.client as any).client.request = jest.fn();
   }

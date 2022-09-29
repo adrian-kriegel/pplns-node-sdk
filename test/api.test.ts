@@ -1,7 +1,7 @@
 
 import './util/custom-matchers.d.ts';
 
-import {
+import PipelineApi, {
   ApiError,
   buildSearchParams,
   stringifyQuery,
@@ -114,6 +114,19 @@ describe('buildSearchParams', () =>
     expect('' + buildSearchParams({ foo: 'bar', bool: true }))
       .toBe('foo=bar&bool=true');
   });
+});
+
+test('API Key is added to every request', () => 
+{
+  const apiKey = 'abc123';
+
+  const req = new PipelineApi({ apiKey }).client.buildRequest(
+    'GET',
+    '/foo',
+    { foo: 'bar' },
+  );
+
+  expect(req.headers?.['X-API-Key']).toBe(apiKey);
 });
 
 describe('Emit & consume', () => 
